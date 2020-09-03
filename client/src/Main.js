@@ -13,20 +13,20 @@ class Main extends Component
 {
     static alterLabel = {
         setPlayingStatus: {
-            text: (dist) => { document.getElementById(`${dist}`).innerHTML = "stop"; },
-            color: (dist) => { document.getElementById(`${dist}_selected`).classList.add("indigo"); }
+            text: (dist) => { if (window.location.href === rootDir.local) document.getElementById(`${dist}`).innerHTML = "stop"; },
+            color: (dist) => { if (window.location.href === rootDir.local) document.getElementById(`${dist}_selected`).classList.add("indigo"); }
         },
         setStopStatus: {
-            text: (dist) => { document.getElementById(`${dist}`).innerHTML = "play"; },
-            color: (dist) => { document.getElementById(`${dist}_selected`).classList.remove("indigo"); }
+            text: (dist) => { if (window.location.href === rootDir.local) document.getElementById(`${dist}`).innerHTML = "play"; },
+            color: (dist) => { if (window.location.href === rootDir.local) document.getElementById(`${dist}_selected`).classList.remove("indigo"); }
         },
         setQueuedStatus: {
-            text: (dist, currentlySelected = 'enqueue') => { document.getElementById(`${dist}`).innerHTML = currentlySelected; },
-            color: (dist) => { document.getElementById(`${dist}_selected`).classList.add("grey"); document.getElementById(`${dist}_selected`).classList.add("darken-3"); }
+            text: (dist, currentlySelected = 'enqueue') => { if (window.location.href === rootDir.local) document.getElementById(`${dist}`).innerHTML = currentlySelected; },
+            color: (dist) => { if (window.location.href === rootDir.local) {document.getElementById(`${dist}_selected`).classList.add("grey"); document.getElementById(`${dist}_selected`).classList.add("darken-3");} }
         },
         turningOffQueueState: {
-            text: (dist) => { document.getElementById(`${dist}`).innerHTML = 'play'; },
-            color: (dist) => { document.getElementById(`${dist}_selected`).classList.remove("grey"); document.getElementById(`${dist}_selected`).classList.remove("darken-3"); }
+            text: (dist) => { if (window.location.href === rootDir.local) document.getElementById(`${dist}`).innerHTML = 'play'; },
+            color: (dist) => { if (window.location.href === rootDir.local) {document.getElementById(`${dist}_selected`).classList.remove("grey"); document.getElementById(`${dist}_selected`).classList.remove("darken-3");} }
         }
     }
 
@@ -44,7 +44,7 @@ class Main extends Component
             NEXT: ""
         };
 
-        this.queueArray = [];
+        this.cueSheet = [];
         
         this.isQueuingMode = false;
         this.isShuffleMode = false;
@@ -66,20 +66,21 @@ class Main extends Component
             case this.isRepeatMode === true :
                 this.CUE.NEXT = this.CUE.CUR;
                 break;
+            // case this.isQueuingMode === true:
             default :
                 this.CUE.NEXT = (this.CUE.CUR) + 1;
                 break;
         }
 
         this.timeoutId = setTimeout( () => {
-            if (this.CUE.NEXT === tagArray.length && this.queueArray.length === 0) {
+            if (this.CUE.NEXT === tagArray.length && this.cueSheet.length === 0) {
                 this._stopAndChangeState();
             }
             else
             {
-                if (this.queueArray.length > 0)
+                if (this.cueSheet.length > 0)
                 {
-                    this.CUE.NEXT = (this.queueArray.shift());
+                    this.CUE.NEXT = (this.cueSheet.shift());
                 }
 
                 if (this.isQueuingMode === true)
@@ -110,6 +111,7 @@ class Main extends Component
                 }
                 Main.alterLabel.turningOffQueueState.text(index);
                 Main.alterLabel.turningOffQueueState.color(index);
+                
             }
             this.isQueuingMode = false;
         }
@@ -140,9 +142,9 @@ class Main extends Component
                 continue;
             }
 
-            if (this.queueArray.includes(index) === true)
+            if (this.cueSheet.includes(index) === true)
             {
-                Main.alterLabel.setQueuedStatus.text(index, this.queueArray.indexOf(index) + 1);
+                Main.alterLabel.setQueuedStatus.text(index, this.cueSheet.indexOf(index) + 1);
             }
             else
             {
@@ -206,12 +208,12 @@ class Main extends Component
             return;
         }
 
-        if (this.isQueuingMode === true)
+        if (this.isQueuingMode === true) // Add AUDIO into cuesheet
         {
-            if (this.queueArray.includes(this.CUE.NEXT) === true)
+            if (this.cueSheet.includes(this.CUE.NEXT) === true)
             {
-                let pos = this.queueArray.indexOf(this.CUE.NEXT);
-                this.queueArray.splice(pos, 1);
+                let pos = this.cueSheet.indexOf(this.CUE.NEXT);
+                this.cueSheet.splice(pos, 1);
                 
                 this.updateQueuedNumber();
                 this.setState({
@@ -220,8 +222,8 @@ class Main extends Component
                 return;
             }
 
-            this.queueArray.push(this.CUE.NEXT);
-            Main.alterLabel.setQueuedStatus.text(this.CUE.NEXT, this.queueArray.length);
+            this.cueSheet.push(this.CUE.NEXT);
+            Main.alterLabel.setQueuedStatus.text(this.CUE.NEXT, this.cueSheet.length);
             this.setState({
                 isNeedtoReRender: true
             });
@@ -237,11 +239,8 @@ class Main extends Component
             this.CUE.CUR = this.CUE.NEXT;
             this.queueNextAudio();
 
-            if (window.location.href === rootDir.local)
-            {
-                Main.alterLabel.setPlayingStatus.text(this.CUE.CUR);
-                Main.alterLabel.setPlayingStatus.color(this.CUE.CUR);
-            }
+            Main.alterLabel.setPlayingStatus.text(this.CUE.CUR);
+            Main.alterLabel.setPlayingStatus.color(this.CUE.CUR);
 
             this.pausedAt = 0;
             this.setState({
@@ -253,14 +252,11 @@ class Main extends Component
         this.audio.pause();
         this.audio.src = URL.createObjectURL(tagArray[this.CUE.NEXT].file);
         this.audio.play();
-        
-        if (window.location.href === rootDir.local)
-        {
-            Main.alterLabel.setStopStatus.text(this.CUE.CUR);
-            Main.alterLabel.setStopStatus.color(this.CUE.CUR);
-            Main.alterLabel.setPlayingStatus.text(this.CUE.NEXT);
-            Main.alterLabel.setPlayingStatus.color(this.CUE.NEXT);
-        }
+
+        Main.alterLabel.setStopStatus.text(this.CUE.CUR);
+        Main.alterLabel.setStopStatus.color(this.CUE.CUR);
+        Main.alterLabel.setPlayingStatus.text(this.CUE.NEXT);
+        Main.alterLabel.setPlayingStatus.color(this.CUE.NEXT);
 
         this.CUE.CUR = this.CUE.NEXT;
         this.queueNextAudio();
@@ -460,7 +456,7 @@ class Main extends Component
         if (this.state.isPlaying === true) { console.log(`nowPlaying: ${this.CUE.CUR}, duration: ${tagArray[this.CUE.CUR].duration - this.pausedAt}`); }
         console.log(`numProcessedItem: ${numProcessedItem}, tagArray.length: ${tagArray.length}`);
         console.log(`numDurationsReceived: ${numDurationsReceived}, tagArray.length: ${tagArray.length}`);
-        console.log("Queued: ", this.queueArray);
+        console.log("Queued: ", this.cueSheet);
         console.log("tagArray: ", tagArray);
         console.log("============================");
         if (this.isShuffleMode || this.isRepeatMode) { 
@@ -468,7 +464,7 @@ class Main extends Component
         }else {
             document.getElementById('queuing_button').classList.remove('disabled');
         }
-        this.queueArray.map( (each) => {
+        this.cueSheet.map( (each) => {
             console.assert(typeof(each) === 'number');
         });
     }

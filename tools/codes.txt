@@ -1,0 +1,151 @@
+=========== for fs ===========
+var fs = require('fs');
+fs.writeFile('yt.json', youTubeJson, (err) => {
+	if (err) throw err;
+	console.log('Saved!');
+});
+
+=========== if axios responds with <script> window[\"ytInitialData\"] = </script> ===========
+const OFFSET_INDEX_CONTAIN_YTINITIALDATA = 3;
+axios.get(encodeURI(req.query.search))
+        .then( (res) => {
+
+            let chunk = [];
+            let $ = cheerio.load(res.data);
+            $('script').each( (i, element) => {
+                chunk.push($(element));
+            });
+
+            let length = chunk.length;
+            const rawString = $(chunk[length - OFFSET_INDEX_CONTAIN_YTINITIALDATA]).contents()[0].data;
+
+            let splited = rawString.split("window[\"ytInitialData\"] = ");
+            splited = splited[1].split(";\n");
+
+            let youTubeJson = splited[0];
+            youtubeJson = JSON.parse(youTubeJson)['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'];
+            youtubeJson = youtubeJson.filter( (each) => each['videoRenderer'] !== undefined );
+            console.log(youtubeJson.length);
+
+            youtubeJson.map( (each, i) => {
+
+                console.log(i);
+
+                let obj = {
+                    videoId: "",
+                    thumbnailUrl: "",
+                    title: "",
+                    viewCount: "",
+                    length: ""
+                };
+
+                obj.videoId = each['videoRenderer'].videoId;
+                obj.thumbnailUrl = each['videoRenderer']['thumbnail']['thumbnails'][0].url;
+                obj.title = each['videoRenderer']['title']['runs'][0].text;
+
+                if (each['videoRenderer']['badges'] !== undefined)
+                {
+                    if (each['videoRenderer']['badges'][0]['metadataBadgeRenderer'].style === "BADGE_STYLE_TYPE_LIVE_NOW")
+                    {
+                        obj.length = "LIVE NOW";
+                        obj.viewCount = `${each['videoRenderer']['viewCountText']['runs'][0].text}${each['videoRenderer']['viewCountText']['runs'][1].text}`;
+                    }
+                    else
+                    {
+                        obj.length = each['videoRenderer']['lengthText']['simpleText'];
+                        obj.viewCount = each['videoRenderer']['viewCountText']['simpleText'];
+                    }
+                }
+                else
+                {
+                    if (each['videoRenderer']['lengthText'] !== undefined)
+                    {
+                        obj.length = each['videoRenderer']['lengthText']['simpleText'];
+                        obj.viewCount = each['videoRenderer']['viewCountText']['simpleText'];
+                    }
+                    else
+                    {
+                        obj.length = "LIVE NOW";
+                        obj.viewCount = `${each['videoRenderer']['viewCountText']['runs'][0].text}${each['videoRenderer']['viewCountText']['runs'][1].text}`;
+                    }
+                }
+
+                console.log(obj);
+                ytInfos.push(obj);
+
+                console.log(ytInfos.length);
+                console.log(ytInfos);
+            });
+        })
+        .catch( (err) => {
+            console.log(err);
+        });
+
+=========== if axios respond contains class="yt-lockup yt-lockup-tile yt-lockup-video vve-check clearfix" ===========
+app.get('/url', (req, res) => {
+    console.log(`serchTerm: ${req.query.search}`);
+    ytVideos = [];
+
+    axios.get(encodeURI(req.query.search))
+        .then( (raw) => {
+
+            fs.writeFile('yt_res.html', raw.data, (err) => {
+                if (err) throw err;
+                console.log('Saved!');
+            });
+
+            let $ = cheerio.load(raw.data);
+            $('div[class="yt-lockup yt-lockup-tile yt-lockup-video vve-check clearfix"]').each( (i, yt_video) => {
+                let ytDatas = {
+                    index: 0,
+                    watchId : "",
+                    thumbnail: "",
+                    title: "",
+                    owner: "",
+                    when: "",
+                    view: "",
+                    duration: ""
+                };
+
+                ytDatas.index = i;
+                ytDatas.watchId = $(yt_video).attr('data-context-item-id');
+
+                let yt_thumb = $(yt_video).children().find('span[class="yt-thumb-simple"]');
+                let thumbImg= yt_thumb.find('img');
+                if (thumbImg.attr('data-thumb') !== undefined)
+                {
+                    ytDatas.thumbnail = thumbImg.attr('data-thumb');
+                }
+                else
+                {
+                    ytDatas.thumbnail = thumbImg.attr('src');
+                }
+                ytDatas.duration = $(yt_thumb).find('span[class="video-time"]').text();
+
+                let yt_info = $(yt_video).children().find('div[class="yt-lockup-content"]');
+                ytDatas.title = yt_info.find('h3[class="yt-lockup-title "] > a').attr('title');
+                ytDatas.owner = yt_info.find('div[class="yt-lockup-byline "] > a').text();
+
+                let yt_metadata = yt_info.find('div[class="yt-lockup-meta "] > ul').children();
+                if (yt_metadata.length === 1)
+                {
+                    ytDatas.view = yt_metadata.first().text();
+                }
+                else
+                {
+                    ytDatas.when = yt_metadata.first().text();
+                    ytDatas.view = yt_metadata.last().text();
+                }
+
+                console.log(ytDatas);
+                ytVideos.push(ytDatas);
+            });
+
+            console.log(ytVideos);
+        })
+        .catch( (err) => {
+            console.log(err);
+        });
+        
+    res.status(200).send('finished');
+});
