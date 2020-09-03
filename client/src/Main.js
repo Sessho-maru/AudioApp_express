@@ -85,9 +85,12 @@ class Main extends Component
 
                 if (this.isQueuingMode === true)
                 {
-                    this.toggleQueuingMode();
-                    this._playAndChangeState();
-                    this.toggleQueuingMode();
+                    if (window.location.href !== rootDir.local)
+                    {
+                        this.toggleQueuingMode();
+                        this._playAndChangeState();
+                        this.toggleQueuingMode();
+                    }
                 }else {
                     this._playAndChangeState();
                 }
@@ -96,10 +99,6 @@ class Main extends Component
     }
 
     toggleQueuingMode = () => {
-        if (window.location.href !== rootDir.local)
-        {
-            return;
-        }
 
         if (this.isQueuingMode === true)
         {
@@ -328,6 +327,7 @@ class Main extends Component
             fr.onload = (readEvent) => {
                 var audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 audioContext.decodeAudioData(readEvent.target.result, (buffer) => {
+                    
                     tagArray[index].duration = buffer.duration;
                     console.log(`duration: ${buffer.duration} of ${index} is inserted`);
 
@@ -371,6 +371,7 @@ class Main extends Component
             console.log("insertTagInfo->map() has ran");
 
             this.jsmediatags.read(each, {
+
                 onSuccess: function(tag) {
                     console.log("jsmediaTags.read() has been run");
                     
@@ -388,7 +389,6 @@ class Main extends Component
                     numProcessedItem = numProcessedItem + 1;
                 }
             });
-
         });
     }
 
@@ -487,11 +487,12 @@ class Main extends Component
                         <a className="btn-floating btn-small grey lighten-1"><i className="large material-icons">add</i></a>
                         <ul>
                             <li>
-                                <a onClick={ () => {this.openFileDialog(true)} } className="btn-floating green"><i className="material-icons">playlist_add</i></a>
-                            </li>
-                            <li>
                                 <a onClick={ () => {this.openFileDialog(false)} } className="btn-floating blue"><i className="material-icons">queue</i></a>
                             </li>
+                            <li>
+                                <a onClick={ () => {this.openFileDialog(true)} } className="btn-floating green"><i className="material-icons">playlist_add</i></a>
+                            </li>
+                            
                         </ul>
                     </div>
                 </div>
